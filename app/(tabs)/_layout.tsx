@@ -1,6 +1,6 @@
-import { SymbolView } from 'expo-symbols';
 import { Tabs } from 'expo-router';
 
+import { TabIcon } from '@/components/TabIcon';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
@@ -19,10 +19,10 @@ export default function TabLayout() {
         options={{
           title: 'Today',
           tabBarIcon: ({ color }) => (
-            <SymbolView
+            <TabIcon
+              color={color}
               name={{ ios: 'house.fill', android: 'home', web: 'home' }}
-              tintColor={color}
-              size={26}
+              glyph="⌂"
             />
           ),
         }}
@@ -32,10 +32,14 @@ export default function TabLayout() {
         options={{
           title: 'Capture',
           tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{ ios: 'camera.fill', android: 'photo_camera', web: 'photo_camera' }}
-              tintColor={color}
-              size={26}
+            <TabIcon
+              color={color}
+              name={{
+                ios: 'camera.fill',
+                android: 'photo_camera',
+                web: 'photo_camera',
+              }}
+              glyph="◉"
             />
           ),
         }}
@@ -45,10 +49,10 @@ export default function TabLayout() {
         options={{
           title: 'History',
           tabBarIcon: ({ color }) => (
-            <SymbolView
+            <TabIcon
+              color={color}
               name={{ ios: 'chart.bar.fill', android: 'bar_chart', web: 'bar_chart' }}
-              tintColor={color}
-              size={26}
+              glyph="▦"
             />
           ),
         }}
@@ -58,10 +62,10 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => (
-            <SymbolView
+            <TabIcon
+              color={color}
               name={{ ios: 'person.fill', android: 'person', web: 'person' }}
-              tintColor={color}
-              size={26}
+              glyph="☺"
             />
           ),
         }}

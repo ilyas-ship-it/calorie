@@ -14,6 +14,8 @@ export const env = {
   authUrl: process.env.EXPO_PUBLIC_AUTH_URL ?? '',
   /** Soft paywall / premium feature flag for commercialization stub. */
   featurePremiumStub: process.env.EXPO_PUBLIC_FEATURE_PREMIUM === 'true',
+  /** Optional UX hint for web/demo testing (demo button is always available). */
+  webDemo: process.env.EXPO_PUBLIC_WEB_DEMO === 'true',
 };
 
 export function hasVisionConfig(): boolean {

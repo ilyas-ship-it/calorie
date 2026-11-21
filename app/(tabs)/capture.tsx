@@ -1,7 +1,7 @@
-import * as ImagePicker from 'expo-image-picker';
+import { Asset } from 'expo-asset';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/Themed';
 import {
@@ -14,6 +14,13 @@ import {
   Title,
 } from '@/components/ui';
 import type { CaptureMode } from '@/src/domain/types';
+import { env } from '@/src/config/env';
+import {
+  DEMO_PHOTO,
+  captureMealPhoto,
+  isWeb,
+  resolveDemoPhotoUri,
+} from '@/src/platform/captureMedia';
 import { services } from '@/src/services/appServices';
 
 export default function CaptureScreen() {
@@ -22,6 +29,9 @@ export default function CaptureScreen() {
   const initialMode: CaptureMode = params.mode === 'label' ? 'label' : 'plate';
   const [mode, setMode] = useState<CaptureMode>(initialMode);
   const [uri, setUri] = useState<string | null>(null);
+  const [previewSource, setPreviewSource] = useState<
+    { uri: string } | number | null
+  >(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,25 +40,39 @@ export default function CaptureScreen() {
     [mode],
   );
 
-  async function pick(fromCamera: boolean) {
+  async function pick(preferred: 'camera' | 'library') {
     setError(null);
-    const permission = fromCamera
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError('Permission is required to capture or pick a photo.');
-      return;
+
+    // On web, camera is unreliable — steer users to file picker first when they tap Camera.
+    if (isWeb() && preferred === 'camera') {
+      setError(
+        'Browser camera is limited. Use Choose file, or Demo photo to run the full flow.',
+      );
     }
 
-    const result = fromCamera
-      ? await ImagePicker.launchCameraAsync({ quality: 0.7 })
-      : await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ['images'],
-          quality: 0.7,
-        });
+    const result = await captureMealPhoto(preferred);
+    if (!result.ok) {
+      if (result.error !== 'Picker canceled.' && result.error !== 'Camera canceled.') {
+        setError(result.error);
+      }
+      return;
+    }
+    setUri(result.uri);
+    setPreviewSource({ uri: result.uri });
+  }
 
-    if (!result.canceled && result.assets[0]?.uri) {
-      setUri(result.assets[0].uri);
+  async function useDemoPhoto() {
+    setError(null);
+    try {
+      const asset = Asset.fromModule(DEMO_PHOTO);
+      await asset.downloadAsync();
+      const demoUri = asset.localUri ?? asset.uri ?? resolveDemoPhotoUri();
+      setUri(demoUri);
+      setPreviewSource(DEMO_PHOTO);
+    } catch {
+      const fallback = resolveDemoPhotoUri();
+      setUri(fallback);
+      setPreviewSource(DEMO_PHOTO);
     }
   }
 
@@ -88,6 +112,9 @@ export default function CaptureScreen() {
       <Title>Capture</Title>
       <Subtitle>
         {modeLabel} stub — UI talks to ports only. Confirm estimates on the next screen.
+        {isWeb() || env.webDemo
+          ? ' Web/demo: use Choose file or Demo photo.'
+          : ''}
       </Subtitle>
 
       <View style={styles.row}>
@@ -104,17 +131,28 @@ export default function CaptureScreen() {
       </View>
 
       <Card>
-        <Muted>Photo source</Muted>
+        <Muted>Photo source{isWeb() ? ' (browser)' : ''}</Muted>
         <View style={styles.row}>
+          {!isWeb() && (
+            <View style={styles.flex}>
+              <PrimaryButton label="Camera" onPress={() => pick('camera')} />
+            </View>
+          )}
           <View style={styles.flex}>
-            <PrimaryButton label="Camera" onPress={() => pick(true)} />
+            <PrimaryButton
+              label={isWeb() ? 'Choose file' : 'Gallery'}
+              onPress={() => pick('library')}
+            />
           </View>
           <View style={styles.flex}>
-            <SecondaryButton label="Gallery" onPress={() => pick(false)} />
+            <SecondaryButton label="Demo photo" onPress={useDemoPhoto} />
           </View>
         </View>
-        {uri ? (
-          <Image source={{ uri }} style={styles.preview} />
+        {Platform.OS !== 'web' && (
+          <Muted>If camera fails, use Gallery or Demo photo — same review flow.</Muted>
+        )}
+        {previewSource ? (
+          <Image source={previewSource} style={styles.preview} />
         ) : (
           <View style={styles.placeholder}>
             <Muted>No photo yet</Muted>
@@ -136,8 +174,8 @@ export default function CaptureScreen() {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 10 },
-  flex: { flex: 1 },
+  row: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
+  flex: { flex: 1, minWidth: 110 },
   preview: {
     width: '100%',
     height: 220,

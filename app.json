@@ -42,7 +42,8 @@
           "photosPermission": "Allow Calorie AI to access photos for plate and label logging.",
           "cameraPermission": "Allow Calorie AI to use the camera to capture meals and labels."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true
